@@ -16,7 +16,7 @@ class DCG;
 class Item;
 
 
-class DAG{
+class DCG{
 public:
 
 
@@ -153,7 +153,7 @@ public:
 
 	void reset_grads(double new_grad = 0){
 		this->grad = new_grad;
-		this->update_grads(this->da_node, new_grad);
+		this->update_grads(this->dc_node, new_grad);
 	}
 
 private:
