@@ -3,6 +3,7 @@
 #include <unordered_map>
 #include <vector>
 #include <unistd.h>
+#include <cmath>
 
 #define log(X) { std::cout << X << std::endl;}
 #define OPR_ADD '+'
@@ -177,7 +178,8 @@ private:
 
 	// wrt b for a/b
 	double div_backwards_1(Item* a, Item* b){
-		return -1 * (a->value / b->value * b->value);
+		double a_ = a->value, b_ = b->value;
+		return - a_ / pow(b_, 2);
 	}
 
 	std::pair<double, double>  compute_grad(const char& operation, Item* a, Item* b){
