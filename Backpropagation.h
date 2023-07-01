@@ -12,7 +12,7 @@
 #define OPR_DIV '/'
 
 
-class DAG;
+class DCG;
 class Item;
 
 
@@ -38,19 +38,19 @@ public:
 			this->operation = operation;
 			this->prev = prev;
 		}
-
-
 	};
+
 
 	Node* result;
 
-	DAG(){
+public:
+	DCG(){
 		this->result = nullptr;
 	}
 	
 	Node* add_item(const double& value,
 				  const char& operation,
-			      Item* operand_1,
+	      		          Item* operand_1,
 				  Item* operand_2,
 				  Item* res){
 
@@ -75,8 +75,8 @@ public:
 	double value;
 	bool requires_grad;
 	double grad;
-	static DAG da_graph; // Dynamic Allocation Graph
-	DAG::Node* da_node;
+	static DCG dc_graph; // Dynamic Computation Graph
+	DCG::Node* dc_node;
 
 
 public:
@@ -94,7 +94,7 @@ public:
 		Item* result = new Item(operation_result, requires_grad || other.requires_grad);
 		
 		if(grad_requirement){
-			result->da_node = da_graph.add_item(operation_result, OPR_ADD, this, &other, result);
+			result->dc_node = dc_graph.add_item(operation_result, OPR_ADD, this, &other, result);
 		}
 		
 		return *result;
@@ -107,7 +107,7 @@ public:
 		Item* result = new Item(operation_result, requires_grad || other.requires_grad);
 		
 		if(grad_requirement){
-			result->da_node = da_graph.add_item(operation_result, OPR_SUB, this, &other, result);
+			result->dc_node = dc_graph.add_item(operation_result, OPR_SUB, this, &other, result);
 		}
 		
 		return *result;
@@ -120,7 +120,7 @@ public:
 		Item* result = new Item(operation_result, requires_grad || other.requires_grad);
 		
 		if(grad_requirement){
-			result->da_node = da_graph.add_item(operation_result, OPR_MUL, this, &other, result);
+			result->dc_node = dc_graph.add_item(operation_result, OPR_MUL, this, &other, result);
 		}
 
 		return *result;
@@ -133,7 +133,7 @@ public:
 		Item* result = new Item(operation_result, requires_grad || other.requires_grad);
 		
 		if(grad_requirement){
-			result->da_node = da_graph.add_item(operation_result, OPR_DIV, this, &other, result);
+			result->dc_node = dc_graph.add_item(operation_result, OPR_DIV, this, &other, result);
 		}
 		
 		return *result;
@@ -146,9 +146,9 @@ public:
 
 
 	void backward(){
-		if(!this->da_node) return;
-		this->da_node->item->grad = 1.0; // Outer most node from which backprop is carried out,  say 'C', ∂C/∂C = 1
-		this->backpropagate(this->da_node);
+		if(!this->dc_node) return;
+		this->dc_node->item->grad = 1.0; // Outer most node from which backprop is carried out,  say 'C', ∂C/∂C = 1
+		this->backpropagate(this->dc_node);
 	}
 
 	void reset_grads(double new_grad = 0){
@@ -207,7 +207,7 @@ private:
 
 	}
 
-	void backpropagate(DAG::Node* node){
+	void backpropagate(DCG::Node* node){
 		if(!node) return;
 
 		/*
@@ -226,7 +226,7 @@ private:
 	}
 
 
-	void update_grads(DAG::Node* node, double new_grad = 0){
+	void update_grads(DCG::Node* node, double new_grad = 0){
 		if(!node) return;
 
 		node->operand_1->grad = new_grad;
@@ -239,4 +239,4 @@ private:
 };
 
 
-DAG Item::da_graph; // Definition outside of the class to allocate memory for the static member
+DCG Item::dc_graph; // Definition outside of the class to allocate memory for the static member
