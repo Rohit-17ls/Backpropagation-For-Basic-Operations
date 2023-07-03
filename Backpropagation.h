@@ -5,11 +5,12 @@
 #include <unistd.h>
 #include <cmath>
 
-#define log(X) { std::cout << X << std::endl;}
+#define log_line(X) { std::cout << X << std::endl;}
 #define OPR_ADD '+'
 #define OPR_SUB  '-'
 #define OPR_MUL '*'
 #define OPR_DIV '/'
+#define OPR_POW '^'
 
 
 class DCG;
@@ -48,7 +49,7 @@ public:
 		this->result = nullptr;
 	}
 	
-	Node* add_item(const double& value,
+	Node* add(const double& value,
 				  const char& operation,
 	      		          Item* operand_1,
 				  Item* operand_2,
@@ -94,7 +95,7 @@ public:
 		Item* result = new Item(operation_result, requires_grad || other.requires_grad);
 		
 		if(grad_requirement){
-			result->dc_node = dc_graph.add_item(operation_result, OPR_ADD, this, &other, result);
+			result->dc_node = dc_graph.add(operation_result, OPR_ADD, this, &other, result);
 		}
 		
 		return *result;
@@ -107,7 +108,7 @@ public:
 		Item* result = new Item(operation_result, requires_grad || other.requires_grad);
 		
 		if(grad_requirement){
-			result->dc_node = dc_graph.add_item(operation_result, OPR_SUB, this, &other, result);
+			result->dc_node = dc_graph.add(operation_result, OPR_SUB, this, &other, result);
 		}
 		
 		return *result;
@@ -120,7 +121,7 @@ public:
 		Item* result = new Item(operation_result, requires_grad || other.requires_grad);
 		
 		if(grad_requirement){
-			result->dc_node = dc_graph.add_item(operation_result, OPR_MUL, this, &other, result);
+			result->dc_node = dc_graph.add(operation_result, OPR_MUL, this, &other, result);
 		}
 
 		return *result;
@@ -133,11 +134,23 @@ public:
 		Item* result = new Item(operation_result, requires_grad || other.requires_grad);
 		
 		if(grad_requirement){
-			result->dc_node = dc_graph.add_item(operation_result, OPR_DIV, this, &other, result);
+			result->dc_node = dc_graph.add(operation_result, OPR_DIV, this, &other, result);
 		}
 		
 		return *result;
 	}
+
+	Item& operator ^ (Item& other){
+        int operation_result = pow(value, other.value);
+        bool grad_requirement = requires_grad || other.requires_grad;
+        Item* result = new Item(operation_result, grad_requirement);
+
+        if(grad_requirement){
+        	result->dc_node = dc_graph.add(operation_result, OPR_POW, this, &other, result);
+        }
+
+    	return *result;
+    }
 
 	friend std::ostream& operator << (std::ostream& os, Item& item){
 		os << item.value << "\n";
@@ -182,25 +195,43 @@ private:
 		return - a_ / pow(b_, 2);
 	}
 
+	// wrt a for a^b    ->   b * a^(b-1)
+	double pow_backwards_0(Item* a, Item* b){
+		double a_ = a->value, b_ = b->value;
+		return b_ * pow(a_, b_ - 1);
+	}
+
+	// wrt b for a^b   ->   ln(a) * a^b
+	double pow_backwards_1(Item* a, Item* b){
+		double  a_ = a->value, b_ = b->value;
+		double y = pow(a_, b_);
+
+		return y * log(a_);
+	}
+
 	std::pair<double, double>  compute_grad(const char& operation, Item* a, Item* b){
 		
 
 		switch(operation){
 			case '+':
-				log("<Add_Backward>");
+				log_line("<Add_Backward>");
 				return {add_backwards(a, b), add_backwards(b, a)};
 
 			case '-':
-				log("<Sub_Backward>");
+				log_line("<Sub_Backward>");
 				return {sub_backwards(a, b), -1*sub_backwards(b, a)};
 
 			case '*':
-				log("<Mul_Backward>");
+				log_line("<Mul_Backward>");
 				return {mul_backwards(a, b), mul_backwards(b, a)};
 
 			case '/':	
-				log("<Div_Backward>");
+				log_line("<Div_Backward>");
 				return {div_backwards_0(a, b), div_backwards_1(a, b)};
+
+			 case '^':
+             	log_line("<Pow_Backward>");
+                return {pow_backwards_0(a, b), pow_backwards_1(a, b)};
 		}
 	
 		return {0.0, 0.0};
